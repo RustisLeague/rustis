@@ -1,11 +1,9 @@
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::mem;
 use std::net::SocketAddr;
 use mio::*;
 use mio::unix::*;
 use mio::tcp::{TcpListener, TcpStream};
-use nom::IResult;
 use rustis::command::{Command, Return};
 use rustis::db::RustisDb;
 use rustis::parse::ParseResult;
@@ -41,7 +39,7 @@ pub struct RustisServer {
 impl RustisServer {
     pub fn new(db_count:usize) -> RustisServer {
         let mut dbs = Vec::with_capacity(db_count);
-        for i in 0..db_count {
+        for _ in 0..db_count {
             dbs.push(RustisDb::new());
         }
         RustisServer {
@@ -72,7 +70,7 @@ impl RustisServer {
                         println!("new connection");
                     }
                     Token(t) => {
-                        let mut read = event.readiness().contains(Ready::readable());
+                        let read = event.readiness().contains(Ready::readable());
                         let mut hup = event.readiness().contains(UnixReady::hup());
                         if read {
                             let mut connection = self.connections.get_mut(&t).unwrap();
@@ -87,11 +85,11 @@ impl RustisServer {
                                         let mut should_run = true;
                                         match cmd {
                                             Command::Select(db) => {
-                                                if db >= 0 && db < self.dbs.len() {
+                                                if db < self.dbs.len() {
                                                     connection.db = db;
                                                 } else {
                                                     should_run = false;
-                                                    stream.write_fmt(format_args!("{}", Return::Error("ERR db out of range".to_string())));
+                                                    stream.write_fmt(format_args!("{}", Return::Error("ERR db out of range".to_string()))).unwrap();
                                                 }
                                             }
                                             Command::SwapDb(db1, db2) => {
@@ -102,7 +100,7 @@ impl RustisServer {
                                         }
                                         if should_run {
                                             let result = self.dbs[connection.db].run_command(cmd);
-                                            stream.write_fmt(format_args!("{}", result));
+                                            stream.write_fmt(format_args!("{}", result)).unwrap();
                                         }
                                     }
                                     buf.drain(0..parsed_chars);
@@ -111,7 +109,7 @@ impl RustisServer {
                         }
                         if hup {
                             let connection = self.connections.remove(&t).unwrap();
-                            self.poll.deregister(&connection.stream);
+                            self.poll.deregister(&connection.stream).unwrap();
                             self.recycle_client_token(t);
                             println!("hup");
                         }

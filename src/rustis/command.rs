@@ -16,11 +16,13 @@ pub enum Command {
     DecrBy {key:Key, decrement:i64},
     // all
     Del {keys:Vec<Key>},
+    Exists {key:Key},
     // misc
     DbSize,
     Select(usize),
     FlushDb,
     SwapDb(usize, usize),
+    Echo {message:String},
 }
 
 #[derive(Debug, PartialEq)]

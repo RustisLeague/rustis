@@ -1,5 +1,4 @@
-use std::collections::hash_map::{HashMap, Entry};
-use std::collections::binary_heap::BinaryHeap;
+use std::collections::{BinaryHeap, HashMap};
 use rustis::command::{Command, Return};
 use rustis::key::{ExpireTime, Key};
 use rustis::value::Value;
@@ -87,6 +86,12 @@ impl RustisDb {
                 }
                 return Return::ValueReturn(Value::IntValue(i));
             }
+            Command::Echo {message} => {
+                return Return::ValueReturn(Value::StrValue(message));
+            }
+            Command::Exists {key} => {
+                return Return::ValueReturn(Value::IntValue(if self.values.contains_key(&key) {1} else {0}));
+            }
             Command::FlushDb => {
                 self.values.clear();
                 return Return::Ok;
@@ -136,7 +141,7 @@ fn test_incr() {
     assert_eq!(db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}), Return::ValueReturn(Value::IntValue(12)));
     db.run_command(Command::Set {key: "abc".to_string(), value: Value::StrValue("defg".to_string()), exp: None});
     assert!(match db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}) {
-        Return::Error(e) => true,
+        Return::Error(_) => true,
         _ => false,
     });
 }

@@ -1,4 +1,4 @@
-use nom::{IResult, space, alpha, alphanumeric, digit};
+use nom::{IResult, digit};
 use rustis::key::Key;
 use rustis::command::Command;
 use rustis::value::Value;
@@ -44,15 +44,23 @@ named!(char_sequence<&str, &str>, do_parse!(
 ));
 
 named!(quoted_char_sequence<&str, &str>, do_parse!(
-    tag!("\"") >>
-    chars: char_sequence >>
-    tag!("\"") >>
+    char!('"') >>
+    chars: is_not!("\"") >>
+    char!('"') >>
     (chars)
 ));
 
 named!(parsed_digit<&str, i64>, do_parse!(
     val: digit >>
     (val.parse::<i64>().unwrap())
+));
+
+named!(parsed_string<&str, &str>, do_parse!(
+    chars: alt!(
+        quoted_char_sequence |
+        char_sequence
+    ) >>
+    (chars)
 ));
 
 named!(key_parser<&str, Key>, do_parse!(
@@ -66,11 +74,13 @@ named!(intvalue_parser<&str, Value>, do_parse!(
 ));
 
 named!(strvalue_parser<&str, Value>, do_parse!(
-    chars: alt!(
-        quoted_char_sequence |
-        char_sequence
-    ) >>
+    chars: parsed_string >>
     (Value::StrValue(chars.to_string()))
+));
+
+named!(value_parser<&str, Value>, do_parse!(
+    val: alt!(intvalue_parser | strvalue_parser) >>
+    (val)
 ));
 
 named!(get_parser<&str, Command>, ws!(do_parse!(
@@ -82,7 +92,7 @@ named!(get_parser<&str, Command>, ws!(do_parse!(
 named!(set_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("SET") >>
     key: key_parser >>
-    value: strvalue_parser >>
+    value: value_parser >>
     (Command::Set {key: key, value: value, exp: None})
 )));
 
@@ -90,6 +100,12 @@ named!(del_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("DEL") >>
     keys: many1!(key_parser) >>
     (Command::Del {keys: keys})
+)));
+
+named!(exists_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("EXISTS") >>
+    key: key_parser >>
+    (Command::Exists {key: key})
 )));
 
 named!(incr_parser<&str, Command>, ws!(do_parse!(
@@ -136,10 +152,16 @@ named!(swapdb_parser<&str, Command>, ws!(do_parse!(
     (Command::SwapDb(db1 as usize, db2 as usize))
 )));
 
-named!(dbsize_parser<&str, Command>, do_parse!(
+named!(dbsize_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("DBSIZE") >>
     (Command::DbSize)
-));
+)));
+
+named!(echo_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("ECHO") >>
+    message: parsed_string >>
+    (Command::Echo {message: message.to_string()})
+)));
 
 named!(pub command_parser<&str, Command>, alt!(
     select_parser |
@@ -149,10 +171,12 @@ named!(pub command_parser<&str, Command>, alt!(
     get_parser |
     set_parser |
     del_parser |
+    exists_parser |
     incrby_parser |
     incr_parser |
     decrby_parser |
-    decr_parser
+    decr_parser |
+    echo_parser
 ));
 
 
@@ -177,11 +201,19 @@ fn test_parse_resp() {
 }
 
 #[test]
+fn test_parse_quoted_chars() {
+    assert_eq!(quoted_char_sequence("\"hello world\""), IResult::Done("", "hello world"));
+}
+
+#[test]
 fn test_parse_command() {
     assert_eq!(command_parser("SELECT 1"), IResult::Done("", Command::Select(1)));
     assert_eq!(command_parser("DBSIZE"), IResult::Done("", Command::DbSize));
     assert_eq!(command_parser("GET abcd"), IResult::Done("", Command::Get {key: "abcd".to_string()}));
+    assert_eq!(command_parser("SET abc 1"), IResult::Done("", Command::Set {key: "abc".to_string(), value: Value::IntValue(1), exp: None}));
+    assert_eq!(command_parser("EXISTS abcd"), IResult::Done("", Command::Exists {key: "abcd".to_string()}));
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));
     assert_eq!(command_parser("INCR abcd"), IResult::Done("", Command::Incr {key: "abcd".to_string()}));
     assert_eq!(command_parser("INCRBY abcd 10"), IResult::Done("", Command::IncrBy {key: "abcd".to_string(), increment: 10}));
+    assert_eq!(command_parser("ECHO \"hello world\""), IResult::Done("", Command::Echo {message: "hello world".to_string()}));
 }
