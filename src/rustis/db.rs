@@ -21,10 +21,6 @@ impl RustisDb {
         // TODO: remove any keys that have expired
     }
 
-    pub fn parse_command(&mut self, c:&str) {
-
-    }
-
     pub fn run_command(&mut self, cmd:Command) -> Return {
         match cmd {
             Command::Get {key} => {
@@ -48,6 +44,12 @@ impl RustisDb {
             Command::Incr {key} => {
                 return self.run_command(Command::IncrBy {key: key, increment: 1});
             }
+            Command::Decr {key} => {
+                return self.run_command(Command::IncrBy {key: key, increment: -1});
+            }
+            Command::DecrBy {key, decrement} => {
+                return self.run_command(Command::IncrBy {key: key, increment: -decrement});
+            }
             Command::IncrBy {key, increment} => {
                 let new_value = match self.values.get(&key) {
                     Some(&Value::IntValue(ref i)) =>
@@ -55,8 +57,11 @@ impl RustisDb {
                         Value::IntValue(i + increment)
                     }
                     Some(&Value::StrValue(ref s)) => {
-                        let i = s.parse::<i64>().unwrap();
-                        Value::IntValue(i + increment)
+                        let parsed = s.parse::<i64>();
+                        match parsed {
+                            Ok(i) => Value::IntValue(i + increment),
+                            Err(_) => return Return::Error("ERR value is not an integer or out of range".to_string()),
+                        }
                     }
                     _ => {
                         Value::IntValue(increment)
@@ -119,4 +124,9 @@ fn test_incr() {
     assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(1)));
     assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(2)));
     assert_eq!(db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}), Return::ValueReturn(Value::IntValue(12)));
+    db.run_command(Command::Set {key: "abc".to_string(), value: Value::StrValue("defg".to_string()), exp: None});
+    assert!(match db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}) {
+        Return::Error(e) => true,
+        _ => false,
+    });
 }

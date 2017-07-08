@@ -105,6 +105,19 @@ named!(incrby_parser<&str, Command>, ws!(do_parse!(
     (Command::IncrBy {key: key, increment: increment})
 )));
 
+named!(decr_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("DECR") >>
+    key: key_parser >>
+    (Command::Decr {key: key})
+)));
+
+named!(decrby_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("DECRBY") >>
+    key: key_parser >>
+    decrement: parsed_digit >>
+    (Command::DecrBy {key: key, decrement: decrement})
+)));
+
 named!(dbsize_parser<&str, Command>, do_parse!(
     tag_no_case!("DBSIZE") >>
     (Command::DbSize)
@@ -116,7 +129,9 @@ named!(pub command_parser<&str, Command>, alt!(
     set_parser |
     del_parser |
     incrby_parser |
-    incr_parser
+    incr_parser |
+    decrby_parser |
+    decr_parser
 ));
 
 
