@@ -33,6 +33,14 @@ pub enum Return {
 }
 
 impl Command {
+    pub fn quote(s:&str) -> String {
+        return if s.len() == 0 || s.contains(" ") {
+            format!("\"{}\"", s)
+        } else {
+            s.to_string()
+        };
+    }
+
     pub fn parse(s:&str) -> ParseResult {
         let mut remaining = s;
         let mut parsed_chars = 0;
@@ -43,7 +51,7 @@ impl Command {
                 IResult::Done(r, x) => {
                     parsed_chars += remaining.len() - r.len();
                     remaining = r;
-                    let joined = x.join(" ");
+                    let joined = x.iter().map(|i| Command::quote(i)).collect::<Vec<String>>().join(" ");
                     let cmd = command_parser(&joined);
                     match cmd {
                         IResult::Done("", c) => {

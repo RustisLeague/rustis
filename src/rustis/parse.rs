@@ -45,9 +45,12 @@ named!(char_sequence<&str, &str>, do_parse!(
 
 named!(quoted_char_sequence<&str, &str>, do_parse!(
     char!('"') >>
-    chars: is_not!("\"") >>
+    chars: opt!(is_not!("\"")) >>
     char!('"') >>
-    (chars)
+    (match chars {
+        Some(x) => x,
+        None => ""
+    })
 ));
 
 named!(parsed_digit<&str, i64>, do_parse!(
@@ -202,6 +205,9 @@ fn test_parse_resp() {
 
 #[test]
 fn test_parse_quoted_chars() {
+    assert_eq!(quoted_char_sequence("\"\""), IResult::Done("", ""));
+    assert_eq!(quoted_char_sequence("\"abc123def\""), IResult::Done("", "abc123def"));
+    assert_eq!(quoted_char_sequence("\" \""), IResult::Done("", " "));
     assert_eq!(quoted_char_sequence("\"hello world\""), IResult::Done("", "hello world"));
 }
 
