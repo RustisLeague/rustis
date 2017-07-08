@@ -9,6 +9,7 @@ use rustis::parse::{ParseResult, resp_array_parser, command_parser};
 pub enum Command {
     // strings
     Set {key:Key, value:Value, exp:Option<u64>},
+    Append {key:Key, value:String},
     Get {key:Key},
     Incr {key:Key},
     IncrBy {key:Key, increment:i64},

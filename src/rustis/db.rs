@@ -40,6 +40,23 @@ impl RustisDb {
                 }
                 return Return::Ok;
             }
+            Command::Append {key, value} => {
+                let new_value = match self.values.get(&key) {
+                    Some(x) => {
+                        match x {
+                            &Value::StrValue(ref s) => format!("{}{}", s, value),
+                            &Value::IntValue(ref i) => format!("{}{}", i, value),
+                            _ => return Return::Error("WRONGTYPE key doesn't contain a string".to_string()),
+                        }
+                    }
+                    None => {
+                        value
+                    }
+                };
+                let return_value = Return::ValueReturn(Value::IntValue(new_value.len() as i64));
+                self.values.insert(key, Value::StrValue(new_value));
+                return return_value;
+            }
             Command::Incr {key} => {
                 return self.run_command(Command::IncrBy {key: key, increment: 1});
             }

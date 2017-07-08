@@ -99,6 +99,13 @@ named!(set_parser<&str, Command>, ws!(do_parse!(
     (Command::Set {key: key, value: value, exp: None})
 )));
 
+named!(append_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("APPEND") >>
+    key: key_parser >>
+    value: parsed_string >>
+    (Command::Append {key: key, value: value.to_string()})
+)));
+
 named!(del_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("DEL") >>
     keys: many1!(key_parser) >>
@@ -173,6 +180,7 @@ named!(pub command_parser<&str, Command>, alt!(
     dbsize_parser |
     get_parser |
     set_parser |
+    append_parser |
     del_parser |
     exists_parser |
     incrby_parser |
