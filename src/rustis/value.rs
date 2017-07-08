@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, HashMap, HashSet, LinkedList};
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -6,15 +7,19 @@ pub enum Value {
     IntValue(i64),
     StrValue(String),
     ArrayValue(Vec<Value>),
+    ListValue(LinkedList<String>),
+    SetValue(HashSet<String>),
+    SortedSetValue(BTreeMap<String, f64>),
+    HashValue(HashMap<String, String>),
 }
 
 impl Display for Value {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
-            &Value::Nil => write!(f, "$-1\r\n"),
             &Value::IntValue(ref i) => write!(f, ":{}\r\n", i),
             &Value::StrValue(ref s) => write!(f, "${}\r\n{}\r\n", s.len(), s),
             &Value::ArrayValue(ref a) => write!(f, "*{}\r\n{}", a.len(), a.iter().map(|ref x| format!("{}", x)).collect::<Vec<String>>().join("")),
+            _ => write!(f, "$-1\r\n"),
         }
     }
 }

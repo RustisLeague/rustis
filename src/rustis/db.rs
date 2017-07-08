@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::hash_map::{HashMap, Entry};
 use std::collections::binary_heap::BinaryHeap;
 use rustis::command::{Command, Return};
 use rustis::key::{ExpireTime, Key};
@@ -45,6 +45,27 @@ impl RustisDb {
                 }
                 return Return::Ok;
             }
+            Command::Incr {key} => {
+                return self.run_command(Command::IncrBy {key: key, increment: 1});
+            }
+            Command::IncrBy {key, increment} => {
+                let new_value = match self.values.get(&key) {
+                    Some(&Value::IntValue(ref i)) =>
+                    {
+                        Value::IntValue(i + increment)
+                    }
+                    Some(&Value::StrValue(ref s)) => {
+                        let i = s.parse::<i64>().unwrap();
+                        Value::IntValue(i + increment)
+                    }
+                    _ => {
+                        Value::IntValue(increment)
+                    }
+                };
+                let return_value = new_value.clone();
+                self.values.insert(key, new_value);
+                return Return::ValueReturn(return_value);
+            }
             Command::DbSize => {
                 return Return::ValueReturn(Value::IntValue(self.values.len() as i64));
             }
@@ -90,4 +111,12 @@ fn test_get_set() {
     let result = db.run_command(Command::Set {key: "test_key123".to_string(), value: Value::StrValue("def".to_string()), exp: None});
     assert_eq!(result, Return::Ok);
     assert_eq!(db.run_command(Command::Get {key: "test_key123".to_string()}), Return::ValueReturn(Value::StrValue("def".to_string())));
+}
+
+#[test]
+fn test_incr() {
+    let mut db = RustisDb::new();
+    assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(1)));
+    assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(2)));
+    assert_eq!(db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}), Return::ValueReturn(Value::IntValue(12)));
 }

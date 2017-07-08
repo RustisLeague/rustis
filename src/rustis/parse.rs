@@ -50,14 +50,19 @@ named!(quoted_char_sequence<&str, &str>, do_parse!(
     (chars)
 ));
 
+named!(parsed_digit<&str, i64>, do_parse!(
+    val: digit >>
+    (val.parse::<i64>().unwrap())
+));
+
 named!(key_parser<&str, Key>, do_parse!(
     char: char_sequence >>
     (char.to_string())
 ));
 
 named!(intvalue_parser<&str, Value>, do_parse!(
-    val: digit >>
-    (Value::IntValue(val.parse::<i64>().unwrap()))
+    val: parsed_digit >>
+    (Value::IntValue(val))
 ));
 
 named!(strvalue_parser<&str, Value>, do_parse!(
@@ -69,31 +74,49 @@ named!(strvalue_parser<&str, Value>, do_parse!(
 ));
 
 named!(get_parser<&str, Command>, ws!(do_parse!(
-    tag!("GET") >>
+    tag_no_case!("GET") >>
     key: key_parser >>
     (Command::Get {key: key})
 )));
 
 named!(set_parser<&str, Command>, ws!(do_parse!(
-    tag!("SET") >>
+    tag_no_case!("SET") >>
     key: key_parser >>
     value: strvalue_parser >>
     (Command::Set {key: key, value: value, exp: None})
 )));
 
 named!(del_parser<&str, Command>, ws!(do_parse!(
-    tag!("DEL") >>
+    tag_no_case!("DEL") >>
     keys: many1!(key_parser) >>
     (Command::Del {keys: keys})
 )));
 
+named!(incr_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("INCR") >>
+    key: key_parser >>
+    (Command::Incr {key: key})
+)));
+
+named!(incrby_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("INCRBY") >>
+    key: key_parser >>
+    increment: parsed_digit >>
+    (Command::IncrBy {key: key, increment: increment})
+)));
+
 named!(dbsize_parser<&str, Command>, do_parse!(
-    tag!("DBSIZE") >>
+    tag_no_case!("DBSIZE") >>
     (Command::DbSize)
 ));
 
 named!(pub command_parser<&str, Command>, alt!(
-    dbsize_parser | get_parser | set_parser | del_parser
+    dbsize_parser |
+    get_parser |
+    set_parser |
+    del_parser |
+    incrby_parser |
+    incr_parser
 ));
 
 
@@ -122,4 +145,6 @@ fn test_parse_command() {
     assert_eq!(command_parser("DBSIZE"), IResult::Done("", Command::DbSize));
     assert_eq!(command_parser("GET abcd"), IResult::Done("", Command::Get {key: "abcd".to_string()}));
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));
+    assert_eq!(command_parser("INCR abcd"), IResult::Done("", Command::Incr {key: "abcd".to_string()}));
+    assert_eq!(command_parser("INCRBY abcd 10"), IResult::Done("", Command::IncrBy {key: "abcd".to_string(), increment: 10}));
 }

@@ -10,6 +10,8 @@ pub enum Command {
     // strings
     Set {key:Key, value:Value, exp:Option<u64>},
     Get {key:Key},
+    Incr {key:Key},
+    IncrBy {key:Key, increment:i64},
 
     // all
     DbSize,
