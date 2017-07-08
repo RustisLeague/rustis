@@ -118,12 +118,33 @@ named!(decrby_parser<&str, Command>, ws!(do_parse!(
     (Command::DecrBy {key: key, decrement: decrement})
 )));
 
+named!(select_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SELECT") >>
+    db: parsed_digit >>
+    (Command::Select(db as usize))
+)));
+
+named!(flushdb_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("FLUSHDB") >>
+    (Command::FlushDb)
+)));
+
+named!(swapdb_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SWAPDB") >>
+    db1: parsed_digit >>
+    db2: parsed_digit >>
+    (Command::SwapDb(db1 as usize, db2 as usize))
+)));
+
 named!(dbsize_parser<&str, Command>, do_parse!(
     tag_no_case!("DBSIZE") >>
     (Command::DbSize)
 ));
 
 named!(pub command_parser<&str, Command>, alt!(
+    select_parser |
+    flushdb_parser |
+    swapdb_parser |
     dbsize_parser |
     get_parser |
     set_parser |
@@ -157,6 +178,7 @@ fn test_parse_resp() {
 
 #[test]
 fn test_parse_command() {
+    assert_eq!(command_parser("SELECT 1"), IResult::Done("", Command::Select(1)));
     assert_eq!(command_parser("DBSIZE"), IResult::Done("", Command::DbSize));
     assert_eq!(command_parser("GET abcd"), IResult::Done("", Command::Get {key: "abcd".to_string()}));
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));

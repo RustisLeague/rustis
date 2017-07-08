@@ -15,8 +15,12 @@ pub enum Command {
     Decr {key:Key},
     DecrBy {key:Key, decrement:i64},
     // all
-    DbSize,
     Del {keys:Vec<Key>},
+    // misc
+    DbSize,
+    Select(usize),
+    FlushDb,
+    SwapDb(usize, usize),
 }
 
 #[derive(Debug, PartialEq)]

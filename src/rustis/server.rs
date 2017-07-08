@@ -6,7 +6,7 @@ use mio::*;
 use mio::unix::*;
 use mio::tcp::{TcpListener, TcpStream};
 use nom::IResult;
-use rustis::command::Command;
+use rustis::command::{Command, Return};
 use rustis::db::RustisDb;
 use rustis::parse::ParseResult;
 
@@ -18,6 +18,7 @@ const EVENT_PREALLOCATE:usize = 0x400;
 struct ClientConnection {
     stream: TcpStream,
     buf: String,
+    db: usize,
 }
 
 impl ClientConnection {
@@ -25,6 +26,7 @@ impl ClientConnection {
         ClientConnection {
             stream: stream,
             buf: String::new(),
+            db: 0,
         }
     }
 }
@@ -82,8 +84,26 @@ impl RustisServer {
                                 ParseResult(parsed_chars, mut c) => {
                                     while c.len() > 0 {
                                         let cmd = c.remove(0);
-                                        let result = self.dbs[0].run_command(cmd);
-                                        stream.write_fmt(format_args!("{}", result));
+                                        let mut should_run = true;
+                                        match cmd {
+                                            Command::Select(db) => {
+                                                if db >= 0 && db < self.dbs.len() {
+                                                    connection.db = db;
+                                                } else {
+                                                    should_run = false;
+                                                    stream.write_fmt(format_args!("{}", Return::Error("ERR db out of range".to_string())));
+                                                }
+                                            }
+                                            Command::SwapDb(db1, db2) => {
+                                                let dbs = &mut self.dbs;
+                                                dbs.swap(db1, db2);
+                                            }
+                                            _ => {}
+                                        }
+                                        if should_run {
+                                            let result = self.dbs[connection.db].run_command(cmd);
+                                            stream.write_fmt(format_args!("{}", result));
+                                        }
                                     }
                                     buf.drain(0..parsed_chars);
                                 }

@@ -87,6 +87,16 @@ impl RustisDb {
                 }
                 return Return::ValueReturn(Value::IntValue(i));
             }
+            Command::FlushDb => {
+                self.values.clear();
+                return Return::Ok;
+            }
+            Command::SwapDb(_, _) => {
+                return Return::Ok;
+            }
+            Command::Select(_) => {
+                return Return::Ok;
+            }
         }
     }
 }
