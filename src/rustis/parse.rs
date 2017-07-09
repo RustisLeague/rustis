@@ -136,6 +136,12 @@ named!(exists_parser<&str, Command>, ws!(do_parse!(
     (Command::Exists {key: key})
 )));
 
+named!(type_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("TYPE") >>
+    key: key_parser >>
+    (Command::Type {key: key})
+)));
+
 named!(incr_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("INCR") >>
     key: key_parser >>
@@ -223,6 +229,7 @@ named!(pub command_parser<&str, Command>, alt!(
     append_parser |
     del_parser |
     exists_parser |
+    type_parser |
     incrbyfloat_parser |
     incrby_parser |
     incr_parser |
@@ -284,6 +291,7 @@ fn test_parse_command() {
     assert_eq!(command_parser("GET abcd"), IResult::Done("", Command::Get {key: "abcd".to_string()}));
     assert_eq!(command_parser("SET abc 1"), IResult::Done("", Command::Set {key: "abc".to_string(), value: Value::IntValue(1), exp: None}));
     assert_eq!(command_parser("EXISTS abcd"), IResult::Done("", Command::Exists {key: "abcd".to_string()}));
+    assert_eq!(command_parser("TYPE abcd"), IResult::Done("", Command::Type {key: "abcd".to_string()}));
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));
     assert_eq!(command_parser("INCR abcd"), IResult::Done("", Command::Incr {key: "abcd".to_string()}));
     assert_eq!(command_parser("INCRBY abcd 10"), IResult::Done("", Command::IncrBy {key: "abcd".to_string(), increment: 10}));

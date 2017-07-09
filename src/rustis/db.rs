@@ -133,6 +133,17 @@ impl RustisDb {
             Command::Exists {key} => {
                 return Return::ValueReturn(Value::IntValue(if self.values.contains_key(&key) {1} else {0}));
             }
+            Command::Type {key} => {
+                return match self.values.get(&key) {
+                    Some(&Value::IntValue(_)) => Return::ValueReturn(Value::StrValue("string".to_string())),
+                    Some(&Value::StrValue(_)) => Return::ValueReturn(Value::StrValue("string".to_string())),
+                    Some(&Value::SetValue(_)) => Return::ValueReturn(Value::StrValue("set".to_string())),
+                    Some(&Value::ListValue(_)) => Return::ValueReturn(Value::StrValue("list".to_string())),
+                    Some(&Value::SortedSetValue(_)) => Return::ValueReturn(Value::StrValue("zset".to_string())),
+                    Some(&Value::HashValue(_)) => Return::ValueReturn(Value::StrValue("hash".to_string())),
+                    _ => Return::ValueReturn(Value::Nil),
+                }
+            }
             Command::FlushDb => {
                 self.values.clear();
                 return Return::Ok;

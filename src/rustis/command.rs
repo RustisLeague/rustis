@@ -19,6 +19,7 @@ pub enum Command {
     // all
     Del {keys:Vec<Key>},
     Exists {key:Key},
+    Type {key:Key},
     // misc
     DbSize,
     Select(usize),
