@@ -13,6 +13,7 @@ pub enum Command {
     Get {key:Key},
     Incr {key:Key},
     IncrBy {key:Key, increment:i64},
+    IncrByFloat {key:Key, increment:f64},
     Decr {key:Key},
     DecrBy {key:Key, decrement:i64},
     // all

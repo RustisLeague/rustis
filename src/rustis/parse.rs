@@ -53,9 +53,27 @@ named!(quoted_char_sequence<&str, &str>, do_parse!(
     })
 ));
 
-named!(parsed_digit<&str, i64>, do_parse!(
+named!(parsed_udigit<&str, i64>, do_parse!(
     val: digit >>
     (val.parse::<i64>().unwrap())
+));
+
+named!(parsed_digit<&str, i64>, do_parse!(
+    sign: opt!(complete!(tag!("-"))) >>
+    val: parsed_udigit >>
+    ((match sign {
+        Some("-") => -1,
+        _ => 1,
+    }) * val)
+));
+
+named!(parsed_float<&str, f64>, do_parse!(
+    base: parsed_digit >>
+    dec: opt!(complete!(do_parse!(tag!(".") >> n: digit >> (n)))) >>
+    (format!("{}.{}", base, match dec {
+        Some(x) => x,
+        None => "0",
+    }).parse::<f64>().unwrap())
 ));
 
 named!(parsed_string<&str, &str>, do_parse!(
@@ -131,6 +149,13 @@ named!(incrby_parser<&str, Command>, ws!(do_parse!(
     (Command::IncrBy {key: key, increment: increment})
 )));
 
+named!(incrbyfloat_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("INCRBYFLOAT") >>
+    key: key_parser >>
+    increment: parsed_float >>
+    (Command::IncrByFloat {key: key, increment: increment})
+)));
+
 named!(decr_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("DECR") >>
     key: key_parser >>
@@ -198,6 +223,7 @@ named!(pub command_parser<&str, Command>, alt!(
     append_parser |
     del_parser |
     exists_parser |
+    incrbyfloat_parser |
     incrby_parser |
     incr_parser |
     decrby_parser |
@@ -228,6 +254,20 @@ fn test_parse_resp() {
 }
 
 #[test]
+fn test_parse_int() {
+    assert_eq!(parsed_digit("123"), IResult::Done("", 123));
+    assert_eq!(parsed_digit("0"), IResult::Done("", 0));
+    assert_eq!(parsed_digit("-123"), IResult::Done("", -123));
+}
+
+#[test]
+fn test_parse_float() {
+    assert_eq!(parsed_float("1"), IResult::Done("", 1.0));
+    assert_eq!(parsed_float("1.0"), IResult::Done("", 1.0));
+    assert_eq!(parsed_float("1.2"), IResult::Done("", 1.2));
+}
+
+#[test]
 fn test_parse_quoted_chars() {
     assert_eq!(quoted_char_sequence("\"\""), IResult::Done("", ""));
     assert_eq!(quoted_char_sequence("\"abc123def\""), IResult::Done("", "abc123def"));
@@ -247,6 +287,7 @@ fn test_parse_command() {
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));
     assert_eq!(command_parser("INCR abcd"), IResult::Done("", Command::Incr {key: "abcd".to_string()}));
     assert_eq!(command_parser("INCRBY abcd 10"), IResult::Done("", Command::IncrBy {key: "abcd".to_string(), increment: 10}));
+    assert_eq!(command_parser("INCRBYFLOAT abcd 0.1"), IResult::Done("", Command::IncrByFloat {key: "abcd".to_string(), increment: 0.1}));
     assert_eq!(command_parser("PING"), IResult::Done("", Command::Ping {message: "PONG".to_string()}));
     assert_eq!(command_parser("ECHO \"hello world\""), IResult::Done("", Command::Echo {message: "hello world".to_string()}));
 }

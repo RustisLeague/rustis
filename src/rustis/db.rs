@@ -87,6 +87,27 @@ impl RustisDb {
                 self.values.insert(key, new_value);
                 return Return::ValueReturn(return_value);
             }
+            Command::IncrByFloat {key, increment} => {
+                let new_value = match self.values.get(&key) {
+                    Some(&Value::IntValue(i)) =>
+                    {
+                        Value::StrValue(((i as f64) + increment).to_string())
+                    }
+                    Some(&Value::StrValue(ref s)) => {
+                        let parsed = s.parse::<f64>();
+                        match parsed {
+                            Ok(i) => Value::StrValue((i + increment).to_string()),
+                            Err(_) => return Return::Error("ERR value is not an integer or out of range".to_string()),
+                        }
+                    }
+                    _ => {
+                        Value::StrValue(increment.to_string())
+                    }
+                };
+                let return_value = new_value.clone();
+                self.values.insert(key, new_value);
+                return Return::ValueReturn(return_value);
+            }
             Command::DbSize => {
                 return Return::ValueReturn(Value::IntValue(self.values.len() as i64));
             }
@@ -156,6 +177,7 @@ fn test_incr() {
     assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(1)));
     assert_eq!(db.run_command(Command::Incr {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(2)));
     assert_eq!(db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}), Return::ValueReturn(Value::IntValue(12)));
+    assert_eq!(db.run_command(Command::IncrByFloat {key: "abc".to_string(), increment: 0.1}), Return::ValueReturn(Value::StrValue("12.1".to_string())));
     db.run_command(Command::Set {key: "abc".to_string(), value: Value::StrValue("defg".to_string()), exp: None});
     assert!(match db.run_command(Command::IncrBy {key: "abc".to_string(), increment: 10}) {
         Return::Error(_) => true,
