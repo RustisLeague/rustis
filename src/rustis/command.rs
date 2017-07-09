@@ -28,6 +28,7 @@ pub enum Command {
     SwapDb(usize, usize),
     Ping {message:String},
     Echo {message:String},
+    Time,
 }
 
 #[derive(Debug, PartialEq)]

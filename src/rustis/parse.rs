@@ -218,6 +218,11 @@ named!(echo_parser<&str, Command>, ws!(do_parse!(
     (Command::Echo {message: message.to_string()})
 )));
 
+named!(time_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("TIME") >>
+    (Command::Time)
+)));
+
 named!(pub command_parser<&str, Command>, alt!(
     select_parser |
     flushdb_parser |
@@ -236,7 +241,8 @@ named!(pub command_parser<&str, Command>, alt!(
     decrby_parser |
     decr_parser |
     echo_parser |
-    ping_parser
+    ping_parser |
+    time_parser
 ));
 
 
@@ -272,6 +278,7 @@ fn test_parse_float() {
     assert_eq!(parsed_float("1"), IResult::Done("", 1.0));
     assert_eq!(parsed_float("1.0"), IResult::Done("", 1.0));
     assert_eq!(parsed_float("1.2"), IResult::Done("", 1.2));
+    assert_eq!(parsed_float("-2.0"), IResult::Done("", -2.0));
 }
 
 #[test]

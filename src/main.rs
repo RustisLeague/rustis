@@ -3,6 +3,7 @@ pub mod rustis;
 #[macro_use]
 extern crate nom;
 extern crate argparse;
+extern crate libc;
 extern crate mio;
 
 use argparse::{ArgumentParser, Store};

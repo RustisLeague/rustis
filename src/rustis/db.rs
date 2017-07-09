@@ -1,4 +1,6 @@
 use std::collections::{BinaryHeap, HashMap};
+use std::ptr::null_mut;
+use libc::{timeval, gettimeofday, time_t, suseconds_t};
 use rustis::command::{Command, Return};
 use rustis::key::{ExpireTime, Key};
 use rustis::value::Value;
@@ -147,6 +149,17 @@ impl RustisDb {
             Command::FlushDb => {
                 self.values.clear();
                 return Return::Ok;
+            }
+            Command::Time => {
+                let mut t = timeval {tv_sec: 0 as time_t, tv_usec: 0 as suseconds_t};
+                unsafe {
+                    gettimeofday(&mut t, null_mut());
+                }
+                let r = Value::ArrayValue(vec![
+                    Value::IntValue(t.tv_sec as i64),
+                    Value::IntValue(t.tv_usec as i64),
+                ]);
+                return Return::ValueReturn(r);
             }
             _ => {
                 return Return::Ok;
