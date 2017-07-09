@@ -155,6 +155,11 @@ named!(flushdb_parser<&str, Command>, ws!(do_parse!(
     (Command::FlushDb)
 )));
 
+named!(flushall_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("FLUSHALL") >>
+    (Command::FlushAll)
+)));
+
 named!(swapdb_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("SWAPDB") >>
     db1: parsed_digit >>
@@ -185,6 +190,7 @@ named!(echo_parser<&str, Command>, ws!(do_parse!(
 named!(pub command_parser<&str, Command>, alt!(
     select_parser |
     flushdb_parser |
+    flushall_parser |
     swapdb_parser |
     dbsize_parser |
     get_parser |
@@ -233,6 +239,8 @@ fn test_parse_quoted_chars() {
 fn test_parse_command() {
     assert_eq!(command_parser("SELECT 1"), IResult::Done("", Command::Select(1)));
     assert_eq!(command_parser("DBSIZE"), IResult::Done("", Command::DbSize));
+    assert_eq!(command_parser("FLUSHALL"), IResult::Done("", Command::FlushAll));
+    assert_eq!(command_parser("FLUSHDB"), IResult::Done("", Command::FlushDb));
     assert_eq!(command_parser("GET abcd"), IResult::Done("", Command::Get {key: "abcd".to_string()}));
     assert_eq!(command_parser("SET abc 1"), IResult::Done("", Command::Set {key: "abc".to_string(), value: Value::IntValue(1), exp: None}));
     assert_eq!(command_parser("EXISTS abcd"), IResult::Done("", Command::Exists {key: "abcd".to_string()}));

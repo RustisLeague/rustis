@@ -116,10 +116,7 @@ impl RustisDb {
                 self.values.clear();
                 return Return::Ok;
             }
-            Command::SwapDb(_, _) => {
-                return Return::Ok;
-            }
-            Command::Select(_) => {
+            _ => {
                 return Return::Ok;
             }
         }

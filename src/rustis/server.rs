@@ -96,6 +96,12 @@ impl RustisServer {
                                                 let dbs = &mut self.dbs;
                                                 dbs.swap(db1, db2);
                                             }
+                                            Command::FlushAll => {
+                                                let dbs = &mut self.dbs;
+                                                for db in dbs {
+                                                    db.run_command(Command::FlushDb);
+                                                }
+                                            }
                                             _ => {}
                                         }
                                         if should_run {

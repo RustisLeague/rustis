@@ -22,6 +22,7 @@ pub enum Command {
     DbSize,
     Select(usize),
     FlushDb,
+    FlushAll,
     SwapDb(usize, usize),
     Ping {message:String},
     Echo {message:String},
