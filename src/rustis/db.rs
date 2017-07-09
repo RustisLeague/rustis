@@ -103,6 +103,9 @@ impl RustisDb {
                 }
                 return Return::ValueReturn(Value::IntValue(i));
             }
+            Command::Ping {message} => {
+                return self.run_command(Command::Echo {message: message});
+            }
             Command::Echo {message} => {
                 return Return::ValueReturn(Value::StrValue(message));
             }

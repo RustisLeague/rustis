@@ -167,6 +167,15 @@ named!(dbsize_parser<&str, Command>, ws!(do_parse!(
     (Command::DbSize)
 )));
 
+named!(ping_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("PING") >>
+    message: opt!(complete!(parsed_string)) >>
+    (Command::Ping {message: match message {
+        Some(x) => x.to_string(),
+        None => "PONG".to_string(),
+    }})
+)));
+
 named!(echo_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("ECHO") >>
     message: parsed_string >>
@@ -187,7 +196,8 @@ named!(pub command_parser<&str, Command>, alt!(
     incr_parser |
     decrby_parser |
     decr_parser |
-    echo_parser
+    echo_parser |
+    ping_parser
 ));
 
 
@@ -229,5 +239,6 @@ fn test_parse_command() {
     assert_eq!(command_parser("DEL abcd efgh"), IResult::Done("", Command::Del {keys: vec!["abcd".to_string(), "efgh".to_string()]}));
     assert_eq!(command_parser("INCR abcd"), IResult::Done("", Command::Incr {key: "abcd".to_string()}));
     assert_eq!(command_parser("INCRBY abcd 10"), IResult::Done("", Command::IncrBy {key: "abcd".to_string(), increment: 10}));
+    assert_eq!(command_parser("PING"), IResult::Done("", Command::Ping {message: "PONG".to_string()}));
     assert_eq!(command_parser("ECHO \"hello world\""), IResult::Done("", Command::Echo {message: "hello world".to_string()}));
 }

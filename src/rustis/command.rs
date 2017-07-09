@@ -23,6 +23,7 @@ pub enum Command {
     Select(usize),
     FlushDb,
     SwapDb(usize, usize),
+    Ping {message:String},
     Echo {message:String},
 }
 
