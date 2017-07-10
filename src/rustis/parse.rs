@@ -76,12 +76,12 @@ named!(parsed_float<&str, f64>, do_parse!(
     }).parse::<f64>().unwrap())
 ));
 
-named!(parsed_string<&str, &str>, do_parse!(
+named!(parsed_string<&str, String>, do_parse!(
     chars: alt!(
         quoted_char_sequence |
         char_sequence
     ) >>
-    (chars)
+    (chars.to_string())
 ));
 
 named!(key_parser<&str, Key>, do_parse!(
@@ -122,6 +122,53 @@ named!(append_parser<&str, Command>, ws!(do_parse!(
     key: key_parser >>
     value: parsed_string >>
     (Command::Append {key: key, value: value.to_string()})
+)));
+
+named!(lindex_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("LINDEX") >>
+    key: key_parser >>
+    index: parsed_digit >>
+    (Command::Lindex {key: key, index: index})
+)));
+
+named!(llen_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("LLEN") >>
+    key: key_parser >>
+    (Command::Llen {key: key})
+)));
+
+named!(lpop_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("LPOP") >>
+    key: key_parser >>
+    (Command::Lpop {key: key})
+)));
+
+named!(rpop_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("RPOP") >>
+    key: key_parser >>
+    (Command::Rpop {key: key})
+)));
+
+named!(lpush_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("LPUSH") >>
+    key: key_parser >>
+    values: many1!(parsed_string) >>
+    (Command::Lpush {key: key, values: values})
+)));
+
+named!(rpush_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("RPUSH") >>
+    key: key_parser >>
+    values: many1!(parsed_string) >>
+    (Command::Rpush {key: key, values: values})
+)));
+
+named!(lset_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("LSET") >>
+    key: key_parser >>
+    index: parsed_digit >>
+    value: parsed_string >>
+    (Command::Lset {key: key, index: index, value: value.to_string()})
 )));
 
 named!(del_parser<&str, Command>, ws!(do_parse!(
@@ -232,6 +279,13 @@ named!(pub command_parser<&str, Command>, alt!(
     get_parser |
     set_parser |
     append_parser |
+    lindex_parser |
+    llen_parser |
+    lpop_parser |
+    rpop_parser |
+    lpush_parser |
+    rpush_parser |
+    lset_parser |
     del_parser |
     exists_parser |
     type_parser |

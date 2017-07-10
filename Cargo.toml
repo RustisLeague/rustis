@@ -8,3 +8,6 @@ argparse = "*"
 libc = "0.2"
 mio = "0.6"
 nom = "^3.1"
+
+[profile.release]
+lto = true

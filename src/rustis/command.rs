@@ -16,6 +16,14 @@ pub enum Command {
     IncrByFloat {key:Key, increment:f64},
     Decr {key:Key},
     DecrBy {key:Key, decrement:i64},
+    // lists
+    Lindex {key:Key, index:i64},
+    Llen {key:Key},
+    Lpop {key:Key},
+    Rpop {key:Key},
+    Lpush {key:Key, values:Vec<String>},
+    Rpush {key:Key, values:Vec<String>},
+    Lset {key:Key, index:i64, value:String},
     // all
     Del {keys:Vec<Key>},
     Exists {key:Key},

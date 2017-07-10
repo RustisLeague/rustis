@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet, LinkedList};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt::{Display, Formatter, Result};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -7,7 +7,7 @@ pub enum Value {
     IntValue(i64),
     StrValue(String),
     ArrayValue(Vec<Value>),
-    ListValue(LinkedList<String>),
+    ListValue(VecDeque<String>),
     SetValue(HashSet<String>),
     SortedSetValue(BTreeMap<String, f64>),
     HashValue(HashMap<String, String>),

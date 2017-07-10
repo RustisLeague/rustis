@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, VecDeque};
 use std::ptr::null_mut;
 use libc::{timeval, gettimeofday, time_t, suseconds_t};
 use rustis::command::{Command, Return};
@@ -110,6 +110,119 @@ impl RustisDb {
                 self.values.insert(key, new_value);
                 return Return::ValueReturn(return_value);
             }
+            Command::Lindex {key, index} => {
+                match self.values.get(&key) {
+                    Some(&Value::ListValue(ref l)) => {
+                        match RustisDb::list_index(&l, index) {
+                            Some(i) => {
+                                return Return::ValueReturn(Value::StrValue(l[i].clone()));
+                            }
+                            None => {
+                                return Return::Error("ERR index out of range".to_string());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Llen {key} => {
+                match self.values.get(&key) {
+                    Some(&Value::ListValue(ref l)) => {
+                        return Return::ValueReturn(Value::IntValue(l.len() as i64));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Lpop {key} => {
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::ListValue(ref mut l)) => {
+                        let popped = l.pop_front();
+                        match popped {
+                            Some(x) => {
+                                return Return::ValueReturn(Value::StrValue(x));
+                            }
+                            None => {
+                                return Return::Error("ERR list is empty".to_string());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Rpop {key} => {
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::ListValue(ref mut l)) => {
+                        let popped = l.pop_back();
+                        match popped {
+                            Some(x) => {
+                                return Return::ValueReturn(Value::StrValue(x));
+                            }
+                            None => {
+                                return Return::Error("ERR list is empty".to_string());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Lpush {key, values} => {
+                if !self.values.contains_key(&key) {
+                    self.values.insert(key.clone(), Value::ListValue(VecDeque::new()));
+                }
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::ListValue(ref mut l)) => {
+                        for val in values {
+                            l.push_front(val);
+                        }
+                        return Return::ValueReturn(Value::IntValue(l.len() as i64));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Rpush {key, values} => {
+                if !self.values.contains_key(&key) {
+                    self.values.insert(key.clone(), Value::ListValue(VecDeque::new()));
+                }
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::ListValue(ref mut l)) => {
+                        for val in values {
+                            l.push_back(val);
+                        }
+                        return Return::ValueReturn(Value::IntValue(l.len() as i64));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
+            Command::Lset {key, index, value} => {
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::ListValue(ref mut l)) => {
+                        match RustisDb::list_index(&l, index) {
+                            Some(i) => {
+                                l[i] = value;
+                                return Return::Ok;
+                            }
+                            None => {
+                                return Return::Error("ERR index out of range".to_string());
+                            }
+                        }
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a list".to_string());
+                    }
+                }
+            }
             Command::DbSize => {
                 return Return::ValueReturn(Value::IntValue(self.values.len() as i64));
             }
@@ -166,6 +279,19 @@ impl RustisDb {
             }
         }
     }
+
+    fn list_index<T>(list:&VecDeque<T>, i:i64) -> Option<usize> {
+        let len = list.len() as i64;
+        let mut index = i;
+        if index < 0 {
+            index = len + index;
+        }
+        if index >= 0 && i < len {
+            return Some(index as usize);
+        } else {
+            return None;
+        }
+    }
 }
 
 #[test]
@@ -207,4 +333,14 @@ fn test_incr() {
         Return::Error(_) => true,
         _ => false,
     });
+}
+
+#[test]
+fn test_list() {
+    let mut db = RustisDb::new();
+    db.run_command(Command::Lpush {key: "abc".to_string(), values: vec!["a".to_string()]});
+    db.run_command(Command::Lpush {key: "abc".to_string(), values: vec!["b".to_string(), "c".to_string()]});
+    assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("c".to_string())));
+    assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("b".to_string())));
+    assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("a".to_string())));
 }
