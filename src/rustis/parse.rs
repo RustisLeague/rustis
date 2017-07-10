@@ -171,6 +171,33 @@ named!(lset_parser<&str, Command>, ws!(do_parse!(
     (Command::Lset {key: key, index: index, value: value.to_string()})
 )));
 
+named!(sadd_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SADD") >>
+    key: key_parser >>
+    members: many1!(parsed_string) >>
+    (Command::Sadd {key: key, members: members})
+)));
+
+named!(scard_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SCARD") >>
+    key: key_parser >>
+    (Command::Scard {key: key})
+)));
+
+named!(sismember_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SISMEMBER") >>
+    key: key_parser >>
+    member: parsed_string >>
+    (Command::Sismember {key: key, member: member})
+)));
+
+named!(srem_parser<&str, Command>, ws!(do_parse!(
+    tag_no_case!("SREM") >>
+    key: key_parser >>
+    members: many1!(parsed_string) >>
+    (Command::Srem {key: key, members: members})
+)));
+
 named!(del_parser<&str, Command>, ws!(do_parse!(
     tag_no_case!("DEL") >>
     keys: many1!(key_parser) >>
@@ -285,6 +312,10 @@ named!(pub command_parser<&str, Command>, alt!(
     rpop_parser |
     lpush_parser |
     rpush_parser |
+    sadd_parser |
+    scard_parser |
+    sismember_parser |
+    srem_parser |
     lset_parser |
     del_parser |
     exists_parser |

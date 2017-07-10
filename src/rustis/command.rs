@@ -24,6 +24,11 @@ pub enum Command {
     Lpush {key:Key, values:Vec<String>},
     Rpush {key:Key, values:Vec<String>},
     Lset {key:Key, index:i64, value:String},
+    // sets
+    Sadd {key:Key, members:Vec<String>},
+    Scard {key:Key},
+    Sismember {key:Key, member:String},
+    Srem {key:Key, members:Vec<String>},
     // all
     Del {keys:Vec<Key>},
     Exists {key:Key},

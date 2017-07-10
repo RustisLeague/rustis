@@ -1,4 +1,4 @@
-use std::collections::{BinaryHeap, HashMap, VecDeque};
+use std::collections::{BinaryHeap, HashMap, HashSet, VecDeque};
 use std::ptr::null_mut;
 use libc::{timeval, gettimeofday, time_t, suseconds_t};
 use rustis::command::{Command, Return};
@@ -223,6 +223,63 @@ impl RustisDb {
                     }
                 }
             }
+            Command::Sadd {key, members} => {
+                if !self.values.contains_key(&key) {
+                    self.values.insert(key.clone(), Value::SetValue(HashSet::new()));
+                }
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::SetValue(ref mut s)) => {
+                        let mut added = 0;
+                        for member in members {
+                            if !s.contains(&member) {
+                                s.insert(member.clone());
+                                added += 1;
+                            }
+                        }
+                        return Return::ValueReturn(Value::IntValue(added));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a set".to_string());
+                    }
+                }
+            }
+            Command::Scard {key} => {
+                match self.values.get(&key) {
+                    Some(&Value::SetValue(ref s)) => {
+                        return Return::ValueReturn(Value::IntValue(s.len() as i64));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a set".to_string());
+                    }
+                }
+            }
+            Command::Sismember {key, member} => {
+                match self.values.get(&key) {
+                    Some(&Value::SetValue(ref s)) => {
+                        return Return::ValueReturn(Value::IntValue(if s.contains(&member) {1} else {0}));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a set".to_string());
+                    }
+                }
+            }
+            Command::Srem {key, members} => {
+                match self.values.get_mut(&key) {
+                    Some(&mut Value::SetValue(ref mut s)) => {
+                        let mut removed = 0;
+                        for member in members {
+                            if s.contains(&member) {
+                                s.remove(&member);
+                                removed += 1;
+                            }
+                        }
+                        return Return::ValueReturn(Value::IntValue(removed));
+                    }
+                    _ => {
+                        return Return::Error("WRONGTYPE not a set".to_string());
+                    }
+                }
+            }
             Command::DbSize => {
                 return Return::ValueReturn(Value::IntValue(self.values.len() as i64));
             }
@@ -343,4 +400,16 @@ fn test_list() {
     assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("c".to_string())));
     assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("b".to_string())));
     assert_eq!(db.run_command(Command::Lpop {key: "abc".to_string()}), Return::ValueReturn(Value::StrValue("a".to_string())));
+}
+
+#[test]
+fn test_set() {
+    let mut db = RustisDb::new();
+    assert_eq!(db.run_command(Command::Sadd {key: "abc".to_string(), members: vec!["one".to_string()]}), Return::ValueReturn(Value::IntValue(1)));
+    assert_eq!(db.run_command(Command::Sadd {key: "abc".to_string(), members: vec!["one".to_string(), "two".to_string(), "three".to_string()]}), Return::ValueReturn(Value::IntValue(2)));
+    assert_eq!(db.run_command(Command::Scard {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(3)));
+    assert_eq!(db.run_command(Command::Srem {key: "abc".to_string(), members: vec!["one".to_string(), "two".to_string(), "four".to_string()]}), Return::ValueReturn(Value::IntValue(2)));
+    assert_eq!(db.run_command(Command::Scard {key: "abc".to_string()}), Return::ValueReturn(Value::IntValue(1)));
+    assert_eq!(db.run_command(Command::Sismember {key: "abc".to_string(), member: "one".to_string()}), Return::ValueReturn(Value::IntValue(0)));
+    assert_eq!(db.run_command(Command::Sismember {key: "abc".to_string(), member: "three".to_string()}), Return::ValueReturn(Value::IntValue(1)));
 }
